@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Battlefield Simulator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #game-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+    #hud > * { pointer-events: auto; }
+    #top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 24px;
+      font-size: 14px;
+    }
+    #top-bar .phase { color: #4fc3f7; font-weight: bold; }
+    #top-bar .turn { color: #aaa; }
+    #bottom-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0,0,0,0.8);
+      padding: 12px 16px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    #command-input {
+      flex: 1;
+      background: #2a2a3e;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 10px 14px;
+      font-size: 14px;
+      outline: none;
+    }
+    #command-input:focus { border-color: #4fc3f7; }
+    #command-input::placeholder { color: #666; }
+    .btn {
+      background: #2a2a3e;
+      border: 1px solid #555;
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 10px 18px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn:hover { background: #3a3a5e; }
+    .btn-primary { background: #1a5276; border-color: #4fc3f7; }
+    .btn-primary:hover { background: #1f6f9f; }
+    .btn-execute { background: #1b5e20; border-color: #66bb6a; }
+    .btn-execute:hover { background: #2e7d32; }
+    #battle-log {
+      position: absolute;
+      top: 48px;
+      right: 8px;
+      width: 300px;
+      max-height: 40%;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.7);
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    #battle-log .log-entry { padding: 2px 0; border-bottom: 1px solid #333; }
+    #battle-log .log-combat { color: #ef5350; }
+    #battle-log .log-move { color: #4fc3f7; }
+    #battle-log .log-morale { color: #ffa726; }
+    #battle-log .log-system { color: #aaa; }
+    #squad-info {
+      position: absolute;
+      top: 48px;
+      left: 8px;
+      width: 260px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 12px;
+    }
+    .squad-card {
+      padding: 6px 0;
+      border-bottom: 1px solid #333;
+    }
+    .squad-card .name { font-weight: bold; }
+    .squad-card .player { color: #4fc3f7; }
+    .squad-card .enemy { color: #ef5350; }
+    .morale-bar {
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
+      margin-top: 3px;
+    }
+    .morale-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+    #order-preview {
+      position: absolute;
+      bottom: 60px;
+      left: 16px;
+      right: 16px;
+      background: rgba(0,0,0,0.85);
+      border: 1px solid #4fc3f7;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 13px;
+      display: none;
+    }
+    #order-preview .warning { color: #ffa726; }
+    #settings-panel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #2a2a3e;
+      border: 1px solid #555;
+      border-radius: 8px;
+      padding: 24px;
+      width: 400px;
+      display: none;
+      z-index: 100;
+    }
+    #settings-panel h3 { margin-bottom: 12px; }
+    #settings-panel input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
+      background: #1a1a2e;
+      border: 1px solid #444;
+      border-radius: 4px;
+      color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+    <div id="hud">
+      <div id="top-bar">
+        <span class="phase" id="phase-display">COMMAND PHASE</span>
+        <span class="turn" id="turn-display">Turn 1</span>
+        <span class="turn" id="tick-display"></span>
+        <div style="flex:1"></div>
+        <button class="btn" id="btn-settings">Settings</button>
+        <button class="btn" id="btn-debug">Debug</button>
+      </div>
+      <div id="squad-info"></div>
+      <div id="battle-log"></div>
+      <div id="order-preview"></div>
+      <div id="bottom-panel">
+        <input type="text" id="command-input" placeholder="Enter orders (e.g., 'Send 1st Infantry to the hill in line formation')" />
+        <button class="btn btn-primary" id="btn-interpret">Interpret</button>
+        <button class="btn btn-execute" id="btn-execute">Execute</button>
+      </div>
+    </div>
+    <div id="settings-panel">
+      <h3>Settings</h3>
+      <label style="font-size:13px">Anthropic API Key</label>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." />
+      <button class="btn btn-primary" id="btn-save-settings" style="width:100%">Save</button>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
