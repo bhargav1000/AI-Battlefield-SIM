@@ -1,5 +1,6 @@
 import { Squad, MatchState } from '../types';
 import { worldToScreen } from './isometric';
+import { getSoldierSprite, getSpriteSize } from './soldier-sprites';
 import {
   PLAYER_COLOR,
   PLAYER_COLOR_DARK,
@@ -26,23 +27,17 @@ function renderSquad(ctx: CanvasRenderingContext2D, squad: Squad): void {
   const mainColor = isPlayer ? PLAYER_COLOR : ENEMY_COLOR;
   const darkColor = isPlayer ? PLAYER_COLOR_DARK : ENEMY_COLOR_DARK;
 
-  // Draw soldiers
+  // Draw soldiers as sprites
+  const { w: sprW, h: sprH } = getSpriteSize();
   for (const soldier of squad.soldiers) {
     if (!soldier.alive) continue;
 
     const sx = screenPos.x + soldier.localOffset.x * 60;
     const sy = screenPos.y + soldier.localOffset.y * 60 - 4;
 
-    // Soldier body
-    ctx.fillStyle = squad.isRouting ? '#888' : mainColor;
-    ctx.beginPath();
-    ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Dark outline
-    ctx.strokeStyle = darkColor;
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
+    const animState = squad.isRouting ? 'routing' : soldier.animState;
+    const sprite = getSoldierSprite(squad.faction, animState);
+    ctx.drawImage(sprite, sx - sprW / 2, sy - sprH, sprW, sprH);
   }
 
   // Squad label background
