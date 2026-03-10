@@ -77,7 +77,7 @@ class Game {
     document.getElementById('btn-save-settings')!.addEventListener('click', () => {
       const key = this.apiKeyInput.value.trim();
       if (key) {
-        localStorage.setItem('anthropic_api_key', key);
+        localStorage.setItem('openai_api_key', key);
         this.interpreter.setApiKey(key);
         this.settingsPanel.style.display = 'none';
       }
@@ -89,7 +89,7 @@ class Game {
   }
 
   private loadApiKey(): void {
-    const key = localStorage.getItem('anthropic_api_key');
+    const key = localStorage.getItem('openai_api_key');
     if (key) {
       this.interpreter.setApiKey(key);
       this.apiKeyInput.value = key;

@@ -20,7 +20,7 @@ export class CommandInterpreter {
         success: false,
         orders: [],
         warnings: [],
-        errors: ['No API key configured. Please set your Anthropic API key in Settings.'],
+        errors: ['No API key configured. Please set your OpenAI API key in Settings.'],
         rawLLMResponse: '',
         playerText,
       };
@@ -29,19 +29,20 @@ export class CommandInterpreter {
     const { systemPrompt, userMessage } = buildPrompt(playerText, state);
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
+          'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
+          model: 'gpt-4o-mini',
           max_tokens: 1024,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userMessage }],
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage },
+          ],
         }),
       });
 
@@ -58,7 +59,7 @@ export class CommandInterpreter {
       }
 
       const data = await response.json();
-      const rawText = data.content?.[0]?.text ?? '';
+      const rawText = data.choices?.[0]?.message?.content ?? '';
 
       const { response: parsed, error } = parseResponse(rawText);
       if (error || !parsed) {
