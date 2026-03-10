@@ -1,5 +1,8 @@
 import { Vec2 } from '../types';
 
+const EDGE_THRESHOLD = 40; // px from canvas edge to trigger scroll
+const EDGE_SCROLL_SPEED = 8; // max px per frame
+
 export class Camera {
   x: number = 0;
   y: number = 0;
@@ -8,12 +11,49 @@ export class Camera {
   private isDragging = false;
   private dragStart: Vec2 = { x: 0, y: 0 };
   private cameraStart: Vec2 = { x: 0, y: 0 };
+  private mouseX: number = -1;
+  private mouseY: number = -1;
+  private mouseOnCanvas = false;
 
   constructor(private canvas: HTMLCanvasElement) {
     this.setupControls();
+    this.startEdgeScroll();
+  }
+
+  private startEdgeScroll(): void {
+    const tick = () => {
+      if (this.mouseOnCanvas && !this.isDragging) {
+        const w = this.canvas.clientWidth;
+        const h = this.canvas.clientHeight;
+        const mx = this.mouseX;
+        const my = this.mouseY;
+
+        // Left edge
+        if (mx < EDGE_THRESHOLD) {
+          this.x += EDGE_SCROLL_SPEED * (1 - mx / EDGE_THRESHOLD);
+        }
+        // Right edge
+        if (mx > w - EDGE_THRESHOLD) {
+          this.x -= EDGE_SCROLL_SPEED * (1 - (w - mx) / EDGE_THRESHOLD);
+        }
+        // Top edge
+        if (my < EDGE_THRESHOLD) {
+          this.y += EDGE_SCROLL_SPEED * (1 - my / EDGE_THRESHOLD);
+        }
+        // Bottom edge
+        if (my > h - EDGE_THRESHOLD) {
+          this.y -= EDGE_SCROLL_SPEED * (1 - (h - my) / EDGE_THRESHOLD);
+        }
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   private setupControls(): void {
+    this.canvas.addEventListener('mouseenter', () => { this.mouseOnCanvas = true; });
+    this.canvas.addEventListener('mouseleave', () => { this.mouseOnCanvas = false; });
+
     this.canvas.addEventListener('mousedown', (e) => {
       if (e.button === 1 || e.button === 2 || (e.button === 0 && e.shiftKey)) {
         this.isDragging = true;
@@ -24,6 +64,11 @@ export class Camera {
     });
 
     window.addEventListener('mousemove', (e) => {
+      // Track mouse position relative to canvas for edge scrolling
+      const rect = this.canvas.getBoundingClientRect();
+      this.mouseX = e.clientX - rect.left;
+      this.mouseY = e.clientY - rect.top;
+
       if (!this.isDragging) return;
       this.x = this.cameraStart.x + (e.clientX - this.dragStart.x);
       this.y = this.cameraStart.y + (e.clientY - this.dragStart.y);
